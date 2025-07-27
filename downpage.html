@@ -1,0 +1,371 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TuneSphere - Tải ứng dụng & Truy cập Web</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+    />
+    <style>
+      /* Custom styles matching TuneSphere's aesthetic */
+      input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        background: linear-gradient(
+          to right,
+          #a78bfa var(--value),
+          #4b5563 var(--value),
+          #4b5563 100%
+        );
+        height: 6px;
+        border-radius: 9999px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        background: #f0abfc;
+        border-radius: 50%;
+        border: 2px solid #fff;
+        transition: transform 0.2s ease;
+      }
+      input[type="range"]::-webkit-slider-thumb:hover {
+        transform: scale(1.2);
+      }
+      input[type="range"]::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        background: #f0abfc;
+        border-radius: 50%;
+        border: 2px solid #fff;
+        transition: transform 0.2s ease;
+      }
+      input[type="range"]::-moz-range-thumb:hover {
+        transform: scale(1.2);
+      }
+      .animate-scale {
+        transition: transform 0.2s ease;
+      }
+      .animate-scale:hover {
+        transform: scale(1.05);
+      }
+      .animate-fade {
+        animation: fadeIn 0.3s ease-in-out;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      .loading-spinner {
+        animation: spin 1s linear infinite;
+        border: 4px solid #a78bfa;
+        border-top-color: #f0abfc;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .app-logo {
+        width: 80px;
+        height: 80px;
+        border-radius: 8px;
+        transition: transform 0.2s ease;
+      }
+      .app-logo:hover {
+        transform: scale(1.1);
+      }
+      .qr-container {
+        background-color: #ffffff; /* White background for QR code */
+        padding: 10px; /* Padding to create white border */
+        border-radius: 8px;
+        display: inline-block;
+      }
+      .qr-image {
+        width: 150px;
+        height: 150px;
+        border-radius: 4px; /* Slightly rounded corners for QR image */
+      }
+      .dark {
+        background-color: #0f172a;
+        color: #e5e7eb;
+      }
+      .dark .bg-gray-900 {
+        background-color: #0f172a;
+      }
+      .dark .bg-gray-800 {
+        background-color: #1e293b;
+      }
+      .dark .bg-gray-700 {
+        background-color: #334155;
+      }
+      .dark .text-gray-400 {
+        color: #9ca3af;
+      }
+      .dark .bg-blue-600 {
+        background-color: #a78bfa;
+      }
+      .dark .hover\:bg-blue-700:hover {
+        background-color: #8b5cf6;
+      }
+      .light {
+        background-color: #f9fafb;
+        color: #1f2937;
+      }
+      .light .bg-gray-900 {
+        background-color: #e5e7eb;
+      }
+      .light .bg-gray-800 {
+        background-color: #f3f4f6;
+      }
+      .light .bg-gray-700 {
+        background-color: #d1d5db;
+      }
+      .light .text-gray-400 {
+        color: #4b5563;
+      }
+      .light .bg-blue-600 {
+        background-color: #60a5fa;
+      }
+      .light .hover\:bg-blue-700:hover {
+        background-color: #3b82f6;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen p-4 transition-colors duration-300">
+    <div class="max-w-4xl mx-auto bg-gray-800 rounded-lg shadow-xl p-6 animate-fade">
+      <!-- Header Section -->
+      <div class="flex justify-between items-center mb-6">
+        <div class="flex items-center gap-4">
+          <img
+            src="https://raw.githubusercontent.com/Phu2812/tunesphere.github.io/refs/heads/main/assets_task_01k10n1mjke9das083e74x6z3j_1753442535_img_0.png"
+            alt="Logo TuneSphere"
+            class="app-logo"
+          />
+          <h1 class="text-3xl font-bold">TuneSphere</h1>
+        </div>
+        <button
+          id="themeToggle"
+          class="p-2 bg-gray-700 rounded-full hover:bg-gray-600 animate-scale"
+        >
+          <i class="fas fa-moon"></i>
+        </button>
+      </div>
+
+      <!-- Hero Section -->
+      <div class="text-center mb-8">
+        <h2 class="text-2xl font-semibold mb-4">Trải nghiệm âm nhạc theo cách của bạn</h2>
+        <p class="text-gray-400 mb-6">
+          TuneSphere mang đến trải nghiệm âm nhạc mượt mà trên cả điện thoại và máy tính.
+          Tải ứng dụng Android hoặc truy cập phiên bản web ngay bây giờ!
+        </p>
+        <div class="flex flex-col sm:flex-row justify-center gap-4 mb-6">
+          <div class="flex flex-col items-center">
+            <div class="qr-container mb-2">
+              <img
+                src="https://raw.githubusercontent.com/Phu2812/tunesphere.github.io/refs/heads/main/qrcode_231951386_665946ad9ee5a8c50df051c3998bac95.png"
+                alt="QR Code for Android App"
+                class="qr-image"
+              />
+            </div>
+            <a
+              href="https://drive.google.com/file/d/1ggOPP8ZCGiy4nYRApsgAgPn9W_wlTV2o/view?usp=sharing"
+              class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg animate-scale"
+            >
+              Tải ứng dụng Android
+            </a>
+          </div>
+          <div class="flex flex-col items-center">
+            <div class="qr-container mb-2">
+              <img
+                src="https://raw.githubusercontent.com/Phu2812/tunesphere.github.io/refs/heads/main/qrcode_231951716_d1a4240bc5ae6a8057e5805d122241a2.png"
+                alt="QR Code for Web Version"
+                class="qr-image"
+              />
+            </div>
+            <a
+              href="https://phu2812.github.io/tunesphere.github.io"
+              class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg animate-scale"
+            >
+              Truy cập phiên bản Web
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Features Section -->
+      <div class="mb-8">
+        <h2 class="text-xl font-semibold mb-4">Tính năng của TuneSphere</h2>
+        <ul class="space-y-4 text-gray-400">
+          <li class="flex items-start gap-3">
+            <i class="fas fa-music text-blue-600 mt-1"></i>
+            <div>
+              <strong>Phát nhạc YouTube:</strong> Phát nhạc trực tiếp từ YouTube bằng cách nhập liên kết video, liên kết danh sách phát, hoặc tìm kiếm theo tên bài hát.
+            </div>
+          </li>
+          <li class="flex items-start gap-3">
+            <i class="fas fa-list-ul text-blue-600 mt-1"></i>
+            <div>
+              <strong>Danh sách phát tùy chỉnh:</strong> Thêm bài hát vào hàng đợi, sắp xếp lại bằng cách kéo thả, và xóa bài hát khi cần.
+            </div>
+          </li>
+          <li class="flex items-start gap-3">
+            <i class="fas fa-random text-blue-600 mt-1"></i>
+            <div>
+              <strong>Chế độ ngẫu nhiên & Lặp lại:</strong> Bật chế độ ngẫu nhiên để phát ngẫu nhiên hoặc lặp lại một bài hoặc cả danh sách phát.
+            </div>
+          </li>
+          <li class="flex items-start gap-3">
+            <i class="fas fa-sliders-h text-blue-600 mt-1"></i>
+            <div>
+              <strong>Thanh tiến độ & Âm lượng:</strong> Di chuyển thanh tiến độ để tua nhạc và điều chỉnh âm lượng bằng thanh trượt mượt mà.
+            </div>
+          </li>
+          <li class="flex items-start gap-3">
+            <i class="fas fa-moon text-blue-600 mt-1"></i>
+            <div>
+              <strong>Giao diện tối/sáng:</strong> Chuyển đổi giữa giao diện tối và sáng, lấy cảm hứng từ thẩm mỹ của "Your Name".
+            </div>
+          </li>
+          <li class="flex items-start gap-3">
+            <i class="fas fa-save text-blue-600 mt-1"></i>
+            <div>
+              <strong>Lưu danh sách phát:</strong> Danh sách phát của bạn được lưu trữ cục bộ, giúp bạn tiếp tục nghe từ nơi đã dừng.
+            </div>
+          </li>
+          <li class="flex items-start gap-3">
+            <i class="fas fa-mobile-alt text-blue-600 mt-1"></i>
+            <div>
+              <strong>Đa nền tảng:</strong> Sử dụng TuneSphere trên thiết bị Android hoặc bất kỳ trình duyệt web nào với chức năng tương đồng.
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Hướng dẫn sử dụng -->
+      <div class="mb-8">
+        <h2 class="text-xl font-semibold mb-4">Cách sử dụng TuneSphere</h2>
+        <ol class="space-y-4 text-gray-400 list-decimal list-inside">
+          <li>
+            <strong>Thêm bài hát:</strong> Nhập liên kết video YouTube, liên kết playlist, hoặc tên bài hát vào ô nhập liệu và nhấn "Thêm vào hàng đợi" hoặc phím Enter.
+          </li>
+          <li>
+            <strong>Điều khiển phát nhạc:</strong> Sử dụng các nút phát/tạm dừng, bài trước, và bài sau để điều hướng danh sách phát. Bật/tắt chế độ ngẫu nhiên hoặc lặp lại để tùy chỉnh phát nhạc.
+          </li>
+          <li>
+            <strong>Quản lý hàng đợi:</strong> Kéo thả bài hát trong hàng đợi để sắp xếp lại, hoặc nhấn nút menu bên cạnh bài hát để xóa.
+          </li>
+          <li>
+            <strong>Điều chỉnh cài đặt:</strong> Sử dụng thanh tiến độ để tua đến phần cụ thể của bài hát và thanh âm lượng để điều chỉnh mức âm thanh.
+          </li>
+          <li>
+            <strong>Chuyển đổi giao diện:</strong> Nhấn vào biểu tượng mặt trăng/mặt trời để chuyển đổi giữa chế độ tối và sáng.
+          </li>
+          <li>
+            <strong>Xóa hàng đợi:</strong> Sử dụng biểu tượng thùng rác trong phần hàng đợi để xóa tất cả bài hát và đặt lại trình phát.
+          </li>
+        </ol>
+      </div>
+
+      <!-- Contact Section -->
+      <div class="mb-8">
+        <h2 class="text-xl font-semibold mb-4">Liên hệ</h2>
+        <ul class="space-y-4 text-gray-400">
+          <li class="flex items-center gap-3">
+            <i class="fab fa-facebook text-blue-600"></i>
+            <a
+              href="https://www.facebook.com/thien.phu.668464"
+              class="hover:text-blue-600"
+              >Facebook: Thiên Phú</a
+            >
+          </li>
+          <li class="flex items-center gap-3">
+            <i class="fas fa-envelope text-blue-600"></i>
+            <a href="mailto:toinghiep@gmail.com" class="hover:text-blue-600"
+              >Gmail: toinghiep@gmail.com</a
+            >
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Footer Section -->
+    <footer class="text-center mt-8 text-gray-400 text-sm">
+      <p>&copy; 2025 TuneSphere. Bản quyền thuộc về Thiên Phú.</p>
+    </footer>
+
+    <script>
+      // Theme Toggle
+      const themeToggle = document.getElementById("themeToggle");
+      function setTheme(theme) {
+        document.body.className = `min-h-screen p-4 transition-colors duration-300 ${theme}`;
+        localStorage.setItem("theme", theme);
+        themeToggle.innerHTML =
+          theme === "dark"
+            ? '<i class="fas fa-moon"></i>'
+            : '<i class="fas fa-sun"></i>';
+      }
+
+      const savedTheme = localStorage.getItem("theme") || "dark";
+      setTheme(savedTheme);
+
+      themeToggle.addEventListener("click", () => {
+        const newTheme = document.body.classList.contains("dark")
+          ? "light"
+          : "dark";
+        setTheme(newTheme);
+      });
+    </script>
+  </body>
+</html>
